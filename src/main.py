@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import sys
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -32,6 +33,19 @@ def _ensure_demo_input() -> None:
         writer.writerow(["item", "Design", "5", "100"])
 
 
+class InvalidInputError(Exception):
+    pass
+
+
+def _parse_number(value, field: str, line: int, desc: str) -> float:
+    try:
+        return float((value or "").strip())
+    except ValueError:
+        raise InvalidInputError(
+            f"line {line}: {field} {value!r} for item {desc!r} is not a number"
+        ) from None
+
+
 def _load_data():
     meta = {}
     items = []
@@ -41,12 +55,10 @@ def _load_data():
             if row.get("type") == "meta":
                 meta[row.get("col1", "")] = row.get("col2", "")
             elif row.get("type") == "item":
-                try:
-                    qty = float(row.get("col2", "0") or 0)
-                    price = float(row.get("col3", "0") or 0)
-                except ValueError:
-                    qty, price = 0.0, 0.0
-                items.append((row.get("col1", ""), qty, price))
+                desc = row.get("col1", "")
+                qty = _parse_number(row.get("col2"), "quantity", reader.line_num, desc)
+                price = _parse_number(row.get("col3"), "unit price", reader.line_num, desc)
+                items.append((desc, qty, price))
     return meta, items
 
 
@@ -92,7 +104,11 @@ def _render_pdf(meta, items) -> None:
 
 def run() -> None:
     _ensure_demo_input()
-    meta, items = _load_data()
+    try:
+        meta, items = _load_data()
+    except InvalidInputError as e:
+        logging.error("Invalid input in %s, %s. No invoice generated.", INPUT_PATH, e)
+        sys.exit(1)
     if not items:
         logging.warning("No invoice items found, aborting.")
         return
