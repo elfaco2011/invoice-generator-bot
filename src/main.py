@@ -67,9 +67,9 @@ def _render_pdf(meta, items) -> None:
     y -= 6 * mm
     c.setFont("Helvetica-Bold", 10)
     c.drawString(20 * mm, y, "Description")
-    c.drawString(90 * mm, y, "Qty")
-    c.drawString(110 * mm, y, "Unit")
-    c.drawString(140 * mm, y, "Total")
+    c.drawRightString(100 * mm, y, "Qty")
+    c.drawRightString(125 * mm, y, "Unit")
+    c.drawRightString(190 * mm, y, "Total")
 
     c.setFont("Helvetica", 10)
     total = 0.0
