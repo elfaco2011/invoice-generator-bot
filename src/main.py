@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import logging
 import sys
@@ -10,9 +11,10 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 
 HERE = Path(__file__).resolve().parent
-EXAMPLES_DIR = HERE.parent / "examples"
-INPUT_PATH = EXAMPLES_DIR / "sample_input.csv"
-OUTPUT_PATH = EXAMPLES_DIR / "sample_output.pdf"
+ROOT_DIR = HERE.parent
+EXAMPLES_DIR = ROOT_DIR / "examples"
+DEFAULT_INPUT = EXAMPLES_DIR / "sample_input.csv"
+DEFAULT_OUTPUT = ROOT_DIR / "output" / "invoice.pdf"
 BOTTOM_MARGIN = 20 * mm
 
 logging.basicConfig(
@@ -21,11 +23,20 @@ logging.basicConfig(
 )
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate a PDF invoice from a CSV file.")
+    parser.add_argument("--input", type=Path, default=DEFAULT_INPUT,
+                        help="input CSV (default: examples/sample_input.csv)")
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
+                        help="output PDF (default: output/invoice.pdf)")
+    return parser.parse_args()
+
+
 def _ensure_demo_input() -> None:
-    if INPUT_PATH.exists():
+    if DEFAULT_INPUT.exists():
         return
     EXAMPLES_DIR.mkdir(parents=True, exist_ok=True)
-    with INPUT_PATH.open("w", newline="") as f:
+    with DEFAULT_INPUT.open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(["type", "col1", "col2", "col3"])  # simple tagged rows
         writer.writerow(["meta", "Invoice #", "INV-001", " "])
@@ -47,10 +58,10 @@ def _parse_number(value, field: str, line: int, desc: str) -> float:
         ) from None
 
 
-def _load_data():
+def _load_data(input_path: Path):
     meta = {}
     items = []
-    with INPUT_PATH.open(newline="") as f:
+    with input_path.open(newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
             if row.get("type") == "meta":
@@ -72,8 +83,8 @@ def _draw_table_header(c, y) -> None:
     c.setFont("Helvetica", 10)
 
 
-def _render_pdf(meta, items) -> None:
-    c = canvas.Canvas(str(OUTPUT_PATH), pagesize=A4)
+def _render_pdf(meta, items, output_path: Path) -> None:
+    c = canvas.Canvas(str(output_path), pagesize=A4)
     width, height = A4
 
     y = height - 30 * mm
@@ -116,17 +127,23 @@ def _render_pdf(meta, items) -> None:
 
 
 def run() -> None:
-    _ensure_demo_input()
+    args = _parse_args()
+    if args.input == DEFAULT_INPUT:
+        _ensure_demo_input()
+    if not args.input.exists():
+        logging.error("Input file not found: %s", args.input)
+        sys.exit(1)
     try:
-        meta, items = _load_data()
+        meta, items = _load_data(args.input)
     except InvalidInputError as e:
-        logging.error("Invalid input in %s, %s. No invoice generated.", INPUT_PATH, e)
+        logging.error("Invalid input in %s, %s. No invoice generated.", args.input, e)
         sys.exit(1)
     if not items:
         logging.warning("No invoice items found, aborting.")
         return
-    _render_pdf(meta, items)
-    logging.info("Invoice PDF generated at %s", OUTPUT_PATH)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    _render_pdf(meta, items, args.output)
+    logging.info("Invoice PDF generated at %s", args.output)
 
 
 if __name__ == "__main__":
