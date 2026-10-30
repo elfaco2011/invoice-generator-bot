@@ -13,6 +13,7 @@ HERE = Path(__file__).resolve().parent
 EXAMPLES_DIR = HERE.parent / "examples"
 INPUT_PATH = EXAMPLES_DIR / "sample_input.csv"
 OUTPUT_PATH = EXAMPLES_DIR / "sample_output.pdf"
+BOTTOM_MARGIN = 20 * mm
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,6 +63,15 @@ def _load_data():
     return meta, items
 
 
+def _draw_table_header(c, y) -> None:
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(20 * mm, y, "Description")
+    c.drawRightString(100 * mm, y, "Qty")
+    c.drawRightString(125 * mm, y, "Unit")
+    c.drawRightString(190 * mm, y, "Total")
+    c.setFont("Helvetica", 10)
+
+
 def _render_pdf(meta, items) -> None:
     c = canvas.Canvas(str(OUTPUT_PATH), pagesize=A4)
     width, height = A4
@@ -77,16 +87,16 @@ def _render_pdf(meta, items) -> None:
         y -= 6 * mm
 
     y -= 6 * mm
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(20 * mm, y, "Description")
-    c.drawRightString(100 * mm, y, "Qty")
-    c.drawRightString(125 * mm, y, "Unit")
-    c.drawRightString(190 * mm, y, "Total")
+    _draw_table_header(c, y)
 
-    c.setFont("Helvetica", 10)
     total = 0.0
     for desc, qty, price in items:
         y -= 6 * mm
+        if y < BOTTOM_MARGIN:
+            c.showPage()
+            y = height - 20 * mm
+            _draw_table_header(c, y)
+            y -= 6 * mm
         line_total = qty * price
         total += line_total
         c.drawString(20 * mm, y, desc)
@@ -95,6 +105,9 @@ def _render_pdf(meta, items) -> None:
         c.drawRightString(190 * mm, y, f"{line_total:.2f}")
 
     y -= 10 * mm
+    if y < BOTTOM_MARGIN:
+        c.showPage()
+        y = height - 20 * mm
     c.setFont("Helvetica-Bold", 11)
     c.drawRightString(190 * mm, y, f"TOTAL: {total:.2f}")
 
