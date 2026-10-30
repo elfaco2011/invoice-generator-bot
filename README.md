@@ -1,39 +1,42 @@
-# Automated Invoice Generation Bot
+# Invoice Generator Bot
 
-## 🔍 Problem
-Creating invoices manually is time-consuming and prone to errors, especially when handling multiple clients or recurring billing.
+## Problem
+Writing invoices by hand means retyping line items and recalculating totals every time.
 
-## ✅ Solution
-This Python automation bot generates structured invoices automatically from input data, reducing manual work and improving billing accuracy.
+## Example output
+Generated from `examples/sample_input.csv` (full file: `examples/sample_output.pdf`):
 
-## 🚀 Features
-- Reads `examples/sample_input.csv` describing invoice metadata and line items.
-- Parses items with quantity and unit price.
-- Calculates line totals and overall total.
-- Renders a one-page invoice to `examples/sample_output.pdf`.
+![Sample invoice](docs/sample_output.png)
 
-## How to run (DEMO)
+## What it does
+- Reads a CSV with two kinds of rows: `meta` (header fields such as invoice number and client) and `item` (description, quantity, unit price).
+- Calculates each line total (quantity x unit price) and the grand total.
+- Renders a one-page A4 invoice to `examples/sample_output.pdf`.
+
+## Quick start
+Tested with Python 3.11.
+
 ```bash
-cd invoice-generator-bot
+pip install -r requirements.txt
 python src/main.py
 ```
 
-A demo `sample_input.csv` will be created on first run.
+## Sample data
+`examples/sample_input.csv`:
 
-## Inputs & outputs
-- **Input:** `examples/sample_input.csv` (tagged `meta` and `item` rows).
-- **Output:** `examples/sample_output.pdf` (generated invoice).
+```text
+type,col1,col2,col3
+meta,Invoice #,INV-001,
+meta,Client,Acme Corp,
+item,Consulting,10,150
+item,Design,5,100
+```
 
-## Dependencies
-- Python 3.x
-- `reportlab` (install with `pip install reportlab`).
+- `meta` rows: `col1` is the label, `col2` the value. Each one is printed as `label: value` under the title.
+- `item` rows: `col1` description, `col2` quantity, `col3` unit price.
 
-## 🎯 Use Cases
-- Freelancer invoicing
-- Small business billing
-- Automated recurring invoices
+If the file is missing, the script recreates it before running.
 
-## 📦 Ready-made Automation Pack
-Looking for a plug-and-play invoicing solution?
-👉 https://khalidelfakir.gumroad.com
-
+## Adapting it to your data
+Replace `examples/sample_input.csv` with your own `meta` and `item` rows, keeping the same four columns.
+The layout is a single page with no currency symbol or tax lines; long item lists do not continue on a second page.
